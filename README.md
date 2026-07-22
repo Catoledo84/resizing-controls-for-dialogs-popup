@@ -1,7 +1,7 @@
 # Resizing controls popup menu
 
 An accessible, resizable modal popup (React + TypeScript + Vite). It implements
-**Idea 4**: a corner resize grip plus a **floating keyboard-hint popover** that
+**an idea for allowing users to resize dialogs and pop up with the keyboard**: a corner resize grip plus a **floating keyboard-hint popover** that
 appears when the grip receives focus.
 
 ## Run
