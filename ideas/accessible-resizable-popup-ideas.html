@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Accessible Resizable Popup — Design Ideas</title>
+<style>
+  :root {
+    --navy: #0a1f5c;
+    --blue: #264ae5;
+    --blue-focus: #3f6bff;
+    --line: #e7e9f0;
+    --bg: #f4f5f9;
+    --ok: #1a9c5b;
+    --warn: #b9770a;
+    --bad: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: #1c2536;
+    line-height: 1.5;
+  }
+  header.page {
+    padding: 32px 40px 8px;
+  }
+  header.page h1 { margin: 0 0 4px; color: var(--navy); font-size: 28px; }
+  header.page p { margin: 0; color: #5b6478; max-width: 760px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+    gap: 24px;
+    padding: 24px 40px 60px;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(16,24,64,.05);
+    display: flex;
+    flex-direction: column;
+  }
+  .card > h2 {
+    margin: 0;
+    font-size: 15px;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: var(--blue);
+    padding: 16px 20px 0;
+  }
+  .card > .desc { padding: 4px 20px 0; color: #5b6478; font-size: 14px; }
+  .badges { padding: 10px 20px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    font-size: 11px; font-weight: 700; letter-spacing: .03em;
+    padding: 3px 8px; border-radius: 999px; text-transform: uppercase;
+  }
+  .badge.ok { background:#e6f7ee; color: var(--ok); }
+  .badge.a11y { background:#e9edff; color: var(--blue); }
+  .badge.warn { background:#fdf1de; color: var(--warn); }
+
+  .stage {
+    margin: 16px 20px 20px;
+    background: #7d879c;
+    border-radius: 10px;
+    padding: 26px;
+    position: relative;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---- shared modal look (matches the screenshot) ---- */
+  .modal {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 20px 50px rgba(8,15,45,.35);
+    width: 320px;
+    height: 220px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    min-height: 140px;
+    max-width: 100%;
+    max-height: 460px;
+  }
+  .modal .titlebar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .modal .titlebar h3 { margin: 0; color: var(--navy); font-size: 16px; }
+  .modal .titlebar .close {
+    border: 0; background: transparent; font-size: 18px; cursor: pointer;
+    color: var(--navy); border-radius: 6px; width: 30px; height: 30px;
+  }
+  .modal .titlebar .close:focus-visible { outline: 3px solid var(--blue-focus); outline-offset: 2px; }
+  .modal .body { flex: 1; padding: 14px; color: #6b7488; font-size: 13px; overflow: auto; }
+
+  /* ===== IDEA 1: corner resize grip (separator) ===== */
+  .grip {
+    position: absolute;
+    right: 3px; bottom: 3px;
+    width: 22px; height: 22px;
+    cursor: nwse-resize;
+    border: 0; background: transparent; padding: 0;
+    border-radius: 4px;
+    display: grid; place-items: center;
+  }
+  .grip svg { display:block; }
+  .grip:focus-visible { outline: 3px solid var(--blue-focus); outline-offset: 1px; }
+  .grip:hover { background: #eef1ff; }
+
+  /* ===== IDEA 2: edge splitter bars ===== */
+  .edge {
+    position: absolute; border: 0; padding: 0; background: transparent;
+  }
+  .edge.right { right: -3px; top: 20%; height: 60%; width: 8px; cursor: ew-resize; }
+  .edge.bottom { bottom: -3px; left: 20%; width: 60%; height: 8px; cursor: ns-resize; }
+  .edge .bar { background: #c3cae0; border-radius: 999px; }
+  .edge.right .bar { width: 4px; height: 100%; margin: 0 auto; }
+  .edge.bottom .bar { height: 4px; width: 100%; }
+  .edge:hover .bar, .edge:focus-visible .bar { background: var(--blue); }
+  .edge:focus-visible { outline: 3px solid var(--blue-focus); outline-offset: 2px; border-radius: 4px; }
+
+  /* ===== IDEA 3: explicit size toolbar in header ===== */
+  .sizebtns { display:flex; gap:6px; align-items:center; }
+  .sizebtns button {
+    border: 1px solid var(--line); background:#fff; border-radius:6px;
+    width: 30px; height: 30px; cursor: pointer; color: var(--navy);
+    font-size: 15px; display:grid; place-items:center;
+  }
+  .sizebtns button:hover { background:#f2f4ff; border-color:#c9d2f7; }
+  .sizebtns button:focus-visible { outline: 3px solid var(--blue-focus); outline-offset: 2px; }
+  .sizebtns .divider { width:1px; height:20px; background:var(--line); }
+
+  /* live region toast */
+  .toast {
+    position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
+    background: rgba(10,31,92,.92); color:#fff; font-size:12px;
+    padding: 5px 12px; border-radius: 999px; opacity: 0; transition: opacity .15s;
+    pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ===== IDEA 4: floating key hint popover ===== */
+  .keyhint {
+    position: absolute;
+    right: 30px; bottom: 30px;
+    width: 232px;
+    background: #0a1f5c;
+    color: #fff;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 10px 30px rgba(8,15,45,.4);
+    font-size: 12.5px;
+    opacity: 0;
+    transform: translateY(6px) scale(.98);
+    transform-origin: bottom right;
+    transition: opacity .16s ease, transform .16s ease;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .keyhint.show { opacity: 1; transform: translateY(0) scale(1); }
+  @media (prefers-reduced-motion: reduce) { .keyhint { transition: opacity .1s; transform: none; } .keyhint.show { transform: none; } }
+  .keyhint::after {
+    content: ""; position: absolute; right: 14px; bottom: -6px;
+    width: 12px; height: 12px; background: #0a1f5c; transform: rotate(45deg);
+  }
+  .keyhint .kh-title { margin: 0 0 8px; font-weight: 700; font-size: 12px; letter-spacing:.03em; text-transform: uppercase; color:#aebbff; }
+  .keyhint ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .keyhint li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .keyhint kbd {
+    font-family: ui-monospace, Menlo, monospace; font-size: 10.5px;
+    background: #22347a; border: 1px solid #35489a; border-bottom-width: 2px;
+    border-radius: 4px; padding: 1px 5px; color:#fff;
+  }
+
+  .hint { padding: 0 20px 18px; font-size: 12.5px; color:#5b6478; }
+  .hint kbd {
+    font-family: ui-monospace, Menlo, monospace; font-size: 11px;
+    background:#eef0f6; border:1px solid #d7dbe8; border-bottom-width:2px;
+    border-radius:4px; padding:1px 5px; color:#333;
+  }
+  .sr-only {
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+  }
+
+  /* comparison table */
+  .compare { padding: 0 40px 60px; }
+  .compare h2 { color: var(--navy); }
+  table { border-collapse: collapse; width: 100%; background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  th, td { text-align:left; padding: 11px 14px; border-bottom:1px solid var(--line); font-size:14px; vertical-align: top; }
+  th { background:#f6f7fb; color: var(--navy); }
+  td .y { color: var(--ok); font-weight:700; }
+  td .n { color: var(--bad); font-weight:700; }
+  td .m { color: var(--warn); font-weight:700; }
+  footer { padding: 0 40px 50px; color:#5b6478; font-size:13px; max-width: 900px;}
+  footer a { color: var(--blue); }
+  code.k { background:#f0f2fa; padding:1px 5px; border-radius:4px; font-size:12.5px; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Accessible resizable popup — 3 design ideas</h1>
+  <p>All three keep your current modal look (title bar + close ✕). The difference is <strong>how the resize control is exposed</strong> and how it works for keyboard + screen-reader users. Try tabbing to each handle and pressing arrow keys.</p>
+</header>
+
+<div class="grid">
+
+  <!-- IDEA 1 -->
+  <section class="card">
+    <h2>Idea 1 — Corner grip (WAI-ARIA splitter)</h2>
+    <p class="desc">Familiar bottom-right diagonal grip, like OS windows. Made focusable and driven by arrow keys.</p>
+    <div class="badges">
+      <span class="badge a11y">Recommended</span>
+      <span class="badge ok">Keyboard ✓</span>
+      <span class="badge ok">Screen reader ✓</span>
+    </div>
+    <div class="stage">
+      <div class="modal" id="m1">
+        <div class="titlebar"><h3>Popup page</h3><button class="close" aria-label="Close">✕</button></div>
+        <div class="body">Content of the popup. Resize me from the corner grip. →</div>
+        <button class="grip" id="grip1"
+                role="separator" aria-orientation="vertical" tabindex="0"
+                aria-label="Resize popup" aria-controls="m1"
+                aria-valuemin="0" aria-valuemax="100" aria-valuenow="35"
+                aria-valuetext="Width 320, height 220 pixels">
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M11 5v1h-5v5H5V6H0V5h5V0h1v5z" fill="none"/>
+            <g fill="#8a93ad"><g fill="#8a93ad">
+              <circle cx="10" cy="10" r="1.1"/><circle cx="10" cy="6" r="1.1"/><circle cx="6" cy="10" r="1.1"/>
+              <circle cx="10" cy="2" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="2" cy="10" r="1.1"/>
+            </g></g>
+          </svg>
+        </button>
+        <div class="toast" id="toast1" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+    <p class="hint">Focus the grip, then: <kbd>← ↑ → ↓</kbd> resize · <kbd>Shift</kbd>+arrow = big step · <kbd>Home</kbd> min · <kbd>End</kbd> max · <kbd>Enter</kbd> reset.</p>
+  </section>
+
+  <!-- IDEA 2 -->
+  <section class="card">
+    <h2>Idea 2 — Edge splitter bars</h2>
+    <p class="desc">Separate right edge (width) and bottom edge (height) handles — the classic APG "window splitter". Clearer target, one axis each.</p>
+    <div class="badges">
+      <span class="badge a11y">APG pattern</span>
+      <span class="badge ok">Keyboard ✓</span>
+      <span class="badge ok">Screen reader ✓</span>
+    </div>
+    <div class="stage">
+      <div class="modal" id="m2">
+        <div class="titlebar"><h3>Popup page</h3><button class="close" aria-label="Close">✕</button></div>
+        <div class="body">Drag the right bar to change width, the bottom bar to change height.</div>
+        <button class="edge right" id="edgeR"
+                role="separator" aria-orientation="vertical" tabindex="0"
+                aria-label="Resize width" aria-controls="m2"
+                aria-valuemin="200" aria-valuemax="520" aria-valuenow="320"
+                aria-valuetext="Width 320 pixels"><span class="bar"></span></button>
+        <button class="edge bottom" id="edgeB"
+                role="separator" aria-orientation="horizontal" tabindex="0"
+                aria-label="Resize height" aria-controls="m2"
+                aria-valuemin="140" aria-valuemax="460" aria-valuenow="220"
+                aria-valuetext="Height 220 pixels"><span class="bar"></span></button>
+        <div class="toast" id="toast2" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+    <p class="hint">Tab to a bar: right bar <kbd>← →</kbd> width · bottom bar <kbd>↑ ↓</kbd> height · <kbd>Home</kbd>/<kbd>End</kbd> min/max.</p>
+  </section>
+
+  <!-- IDEA 3 -->
+  <section class="card">
+    <h2>Idea 3 — Size buttons in the title bar</h2>
+    <p class="desc">No dragging at all — explicit − / + buttons plus presets. The most discoverable and the easiest to get right for a11y. Great alongside Idea 1.</p>
+    <div class="badges">
+      <span class="badge ok">Most discoverable</span>
+      <span class="badge ok">Keyboard ✓</span>
+      <span class="badge ok">Screen reader ✓</span>
+    </div>
+    <div class="stage">
+      <div class="modal" id="m3">
+        <div class="titlebar">
+          <h3>Popup page</h3>
+          <div class="sizebtns" role="group" aria-label="Popup size">
+            <button id="dec3" aria-label="Decrease size">−</button>
+            <button id="inc3" aria-label="Increase size">+</button>
+            <span class="divider" aria-hidden="true"></span>
+            <button id="max3" aria-label="Maximize / restore" title="Maximize">⛶</button>
+            <button class="close" aria-label="Close" style="border:0;width:30px;">✕</button>
+          </div>
+        </div>
+        <div class="body">Use the − and + buttons, or the maximize toggle, in the header.</div>
+        <div class="toast" id="toast3" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+    <p class="hint">Standard buttons — reachable by <kbd>Tab</kbd>, activated with <kbd>Enter</kbd>/<kbd>Space</kbd>. Pair with a corner grip for mouse users.</p>
+  </section>
+
+  <!-- IDEA 4 -->
+  <section class="card">
+    <h2>Idea 4 — Corner grip + floating key hint</h2>
+    <p class="desc">Idea 1's grip, plus a small popover that appears <strong>only when the grip gets keyboard focus</strong>, listing exactly what the keys do. Fades out when focus leaves.</p>
+    <div class="badges">
+      <span class="badge a11y">Discoverable</span>
+      <span class="badge ok">Keyboard ✓</span>
+      <span class="badge ok">Screen reader ✓</span>
+    </div>
+    <div class="stage">
+      <div class="modal" id="m4">
+        <div class="titlebar"><h3>Popup page</h3><button class="close" aria-label="Close">✕</button></div>
+        <div class="body">Tab to the corner grip → a keyboard guide pops up next to it.</div>
+
+        <button class="grip" id="grip4"
+                role="separator" aria-orientation="vertical" tabindex="0"
+                aria-label="Resize popup" aria-controls="m4"
+                aria-describedby="keyhint4"
+                aria-valuemin="0" aria-valuemax="100" aria-valuenow="35"
+                aria-valuetext="Width 320, height 220 pixels">
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <g fill="#8a93ad">
+              <circle cx="10" cy="10" r="1.1"/><circle cx="10" cy="6" r="1.1"/><circle cx="6" cy="10" r="1.1"/>
+              <circle cx="10" cy="2" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="2" cy="10" r="1.1"/>
+            </g>
+          </svg>
+        </button>
+
+        <div class="keyhint" id="keyhint4" role="tooltip">
+          <p class="kh-title">Resize with the keyboard</p>
+          <ul>
+            <li><kbd>←</kbd><kbd>→</kbd> width · <kbd>↑</kbd><kbd>↓</kbd> height</li>
+            <li><kbd>Shift</kbd> + arrow — bigger steps</li>
+            <li><kbd>Home</kbd> smallest · <kbd>End</kbd> largest</li>
+            <li><kbd>Enter</kbd> reset · <kbd>Esc</kbd> close popup</li>
+          </ul>
+        </div>
+
+        <div class="toast" id="toast4" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+    <p class="hint">The hint is a non-focusable <code class="k">role="tooltip"</code> tied to the grip via <code class="k">aria-describedby</code>, so screen readers announce it too. It never traps focus.</p>
+  </section>
+
+</div>
+
+<section class="compare">
+  <h2>What other people do — and how accessible it is</h2>
+  <table>
+    <thead>
+      <tr><th>Approach / product</th><th>Resize mechanism</th><th>Keyboard?</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>CSS <code class="k">resize: both</code></td><td>Native corner handle</td><td><span class="n">No</span></td><td>Zero JS but pointer-only, no ARIA, no arrow keys → fails WCAG 2.1.1. Fine as a mouse bonus, never the only path.</td></tr>
+      <tr><td><strong>WAI-ARIA APG Window Splitter</strong></td><td><code class="k">role="separator"</code> + arrow keys</td><td><span class="y">Yes</span></td><td>The canonical accessible pattern. Ideas 1 &amp; 2 above follow it.</td></tr>
+      <tr><td>VS Code / Chrome DevTools sashes</td><td>Drag splitters</td><td><span class="m">Partial</span></td><td>Mostly mouse; keyboard resize is via named commands/shortcuts, not a focusable handle.</td></tr>
+      <tr><td>Windows window resize</td><td>Alt+Space → Size → arrows; Win+Arrow snap</td><td><span class="y">Yes</span></td><td>OS-level keyboard resize exists. macOS has none natively.</td></tr>
+      <tr><td>JIRA / Confluence, Radix, Ariakit, Reach modals</td><td>—</td><td><span class="y">Dialog ✓</span></td><td>Excellent accessible dialogs (focus trap, Esc, focus return) but <strong>not resizable</strong>.</td></tr>
+      <tr><td>react-resizable / re-resizable / react-rnd</td><td>Drag handles</td><td><span class="n">No</span></td><td>Pointer-only, no ARIA/keyboard out of the box — you'd add it yourself.</td></tr>
+      <tr><td>react-resizable-panels (bvaughn)</td><td><code class="k">PanelResizeHandle</code></td><td><span class="y">Yes</span></td><td>The one popular React lib that ships a real <code class="k">role="separator"</code> handle.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="compare" style="padding-top:0;">
+  <h2>Is a floating keyboard-hint menu a good a11y pattern?</h2>
+  <p style="color:#5b6478; max-width:820px;">Short answer: <strong>yes, when it's built as a description, not a widget</strong>. Showing instructions on focus is a recognized, encouraged technique (it satisfies the spirit of WCAG 3.3.5 Help). But there are right and wrong ways to build it.</p>
+  <table>
+    <thead><tr><th>Do</th><th>Avoid</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="y">✓</span> Trigger it on <strong>focus</strong> (and hover), so keyboard users get it automatically.</td>
+        <td><span class="n">✕</span> Only on hover — keyboard users never see it (WCAG 1.4.13).</td>
+      </tr>
+      <tr>
+        <td><span class="y">✓</span> Make the hint <strong>non-focusable</strong> and tie it to the grip with <code class="k">aria-describedby</code> so it's read aloud.</td>
+        <td><span class="n">✕</span> Putting focusable items inside it — that adds tab stops and can trap keyboard users.</td>
+      </tr>
+      <tr>
+        <td><span class="y">✓</span> Keep it dismissible and let <kbd>Esc</kbd> still close the popup.</td>
+        <td><span class="n">✕</span> Auto-hiding on a timer, or covering the resize target itself.</td>
+      </tr>
+      <tr>
+        <td><span class="y">✓</span> Respect <code class="k">prefers-reduced-motion</code> for the fade/slide.</td>
+        <td><span class="n">✕</span> Big animations, or showing it for <em>every</em> control (hint fatigue).</td>
+      </tr>
+      <tr>
+        <td><span class="y">✓</span> Offer a "don't show again" once learned, or keep it very small.</td>
+        <td><span class="n">✕</span> A large panel that obscures content each time focus lands.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="color:#5b6478; max-width:820px;"><strong>Alternatives / complements to the popover:</strong> (1) a persistent tiny "⌨ shortcuts" link in the title bar opening the same list; (2) instructions in the grip's <code class="k">aria-label</code>/<code class="k">aria-describedby</code> only (no visible popover) — leanest, SR-only; (3) a one-time coach-mark on first use. The popover in Idea 4 is a good default because it's <em>visible</em> (helps sighted keyboard &amp; low-vision users) <em>and</em> announced (helps SR users), without adding tab stops.</p>
+</section>
+
+<footer>
+  <strong>Recommended:</strong> compose an accessible modal (native <code class="k">&lt;dialog&gt;</code> / Radix / Ariakit — focus trap + Esc + focus-return) with a hand-built <strong>Window Splitter</strong> handle: <code class="k">role="separator"</code>, <code class="k">tabindex="0"</code>, <code class="k">aria-controls</code>, <code class="k">aria-label</code>, <code class="k">aria-valuemin/now/max</code> + <code class="k">aria-valuetext</code> for spoken size, a <strong>visible focus ring</strong>, and arrow-key stepping (Shift/Page for coarse, Home/End for min/max). Keep Esc for closing the dialog. Idea 1 (corner grip) is the best default; add Idea 3 (size buttons) for maximum discoverability.
+  <br><br>
+  Sources: <a href="https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/">WAI-ARIA APG · Window Splitter</a> ·
+  <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/resize">MDN · CSS resize</a> ·
+  <a href="https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-valuetext">MDN · aria-valuetext</a> ·
+  <a href="https://github.com/bvaughn/react-resizable-panels">react-resizable-panels</a>
+</footer>
+
+<script>
+  function announce(toast, msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.classList.remove('show'), 1200);
+  }
+
+  // ---- Idea 1: corner grip resizes both axes ----
+  (function () {
+    const m = document.getElementById('m1'), grip = document.getElementById('grip1'), toast = document.getElementById('toast1');
+    const MINW=200, MAXW=520, MINH=140, MAXH=460;
+    function size(){ return { w: m.offsetWidth, h: m.offsetHeight }; }
+    function set(w,h){
+      w=Math.max(MINW,Math.min(MAXW,w)); h=Math.max(MINH,Math.min(MAXH,h));
+      m.style.width=w+'px'; m.style.height=h+'px';
+      const pct=Math.round((w-MINW)/(MAXW-MINW)*100);
+      grip.setAttribute('aria-valuenow', pct);
+      grip.setAttribute('aria-valuetext', `Width ${w}, height ${h} pixels`);
+      announce(toast, `${w} × ${h}`);
+    }
+    grip.addEventListener('keydown', e => {
+      const step = e.shiftKey ? 40 : 12; const s=size(); let done=true;
+      switch(e.key){
+        case 'ArrowRight': set(s.w+step, s.h); break;
+        case 'ArrowLeft':  set(s.w-step, s.h); break;
+        case 'ArrowDown':  set(s.w, s.h+step); break;
+        case 'ArrowUp':    set(s.w, s.h-step); break;
+        case 'Home': set(MINW, MINH); break;
+        case 'End':  set(MAXW, MAXH); break;
+        case 'Enter': set(320,220); break;
+        default: done=false;
+      }
+      if(done) e.preventDefault();
+    });
+  })();
+
+  // ---- Idea 2: edge splitters ----
+  (function () {
+    const m=document.getElementById('m2'), R=document.getElementById('edgeR'), B=document.getElementById('edgeB'), toast=document.getElementById('toast2');
+    const MINW=200,MAXW=520,MINH=140,MAXH=460;
+    function setW(w){ w=Math.max(MINW,Math.min(MAXW,w)); m.style.width=w+'px'; R.setAttribute('aria-valuenow',w); R.setAttribute('aria-valuetext',`Width ${w} pixels`); announce(toast,`Width ${w}`);}
+    function setH(h){ h=Math.max(MINH,Math.min(MAXH,h)); m.style.height=h+'px'; B.setAttribute('aria-valuenow',h); B.setAttribute('aria-valuetext',`Height ${h} pixels`); announce(toast,`Height ${h}`);}
+    R.addEventListener('keydown', e=>{ const st=e.shiftKey?40:12; let d=true;
+      if(e.key==='ArrowRight') setW(m.offsetWidth+st); else if(e.key==='ArrowLeft') setW(m.offsetWidth-st);
+      else if(e.key==='Home') setW(MINW); else if(e.key==='End') setW(MAXW); else d=false; if(d)e.preventDefault(); });
+    B.addEventListener('keydown', e=>{ const st=e.shiftKey?40:12; let d=true;
+      if(e.key==='ArrowDown') setH(m.offsetHeight+st); else if(e.key==='ArrowUp') setH(m.offsetHeight-st);
+      else if(e.key==='Home') setH(MINH); else if(e.key==='End') setH(MAXH); else d=false; if(d)e.preventDefault(); });
+  })();
+
+  // ---- Idea 4: corner grip + floating key hint ----
+  (function () {
+    const m=document.getElementById('m4'), grip=document.getElementById('grip4'),
+          hint=document.getElementById('keyhint4'), toast=document.getElementById('toast4');
+    const MINW=200,MAXW=520,MINH=140,MAXH=460;
+    function size(){ return { w:m.offsetWidth, h:m.offsetHeight }; }
+    function set(w,h){
+      w=Math.max(MINW,Math.min(MAXW,w)); h=Math.max(MINH,Math.min(MAXH,h));
+      m.style.width=w+'px'; m.style.height=h+'px';
+      grip.setAttribute('aria-valuenow', Math.round((w-MINW)/(MAXW-MINW)*100));
+      grip.setAttribute('aria-valuetext', `Width ${w}, height ${h} pixels`);
+      announce(toast, `${w} × ${h}`);
+    }
+    // show hint on keyboard focus and on hover; hide on blur/leave
+    grip.addEventListener('focus', ()=>hint.classList.add('show'));
+    grip.addEventListener('blur',  ()=>hint.classList.remove('show'));
+    grip.addEventListener('mouseenter', ()=>hint.classList.add('show'));
+    grip.addEventListener('mouseleave', ()=>{ if(document.activeElement!==grip) hint.classList.remove('show'); });
+    grip.addEventListener('keydown', e=>{
+      const step=e.shiftKey?40:12; const s=size(); let done=true;
+      switch(e.key){
+        case 'ArrowRight': set(s.w+step,s.h); break;
+        case 'ArrowLeft':  set(s.w-step,s.h); break;
+        case 'ArrowDown':  set(s.w,s.h+step); break;
+        case 'ArrowUp':    set(s.w,s.h-step); break;
+        case 'Home': set(MINW,MINH); break;
+        case 'End':  set(MAXW,MAXH); break;
+        case 'Enter': set(320,220); break;
+        default: done=false;
+      }
+      if(done) e.preventDefault();
+    });
+  })();
+
+  // ---- Idea 3: buttons ----
+  (function () {
+    const m=document.getElementById('m3'), toast=document.getElementById('toast3');
+    const MINW=200,MAXW=520,MINH=140,MAXH=460; let maxed=false, prev=null;
+    function set(w,h){ w=Math.max(MINW,Math.min(MAXW,w)); h=Math.max(MINH,Math.min(MAXH,h)); m.style.width=w+'px'; m.style.height=h+'px'; announce(toast,`${w} × ${h}`);}
+    document.getElementById('inc3').onclick=()=>set(m.offsetWidth+40,m.offsetHeight+30);
+    document.getElementById('dec3').onclick=()=>set(m.offsetWidth-40,m.offsetHeight-30);
+    document.getElementById('max3').onclick=(e)=>{
+      if(!maxed){ prev=[m.offsetWidth,m.offsetHeight]; set(MAXW,MAXH); maxed=true; e.currentTarget.setAttribute('aria-label','Restore size'); announce(toast,'Maximized'); }
+      else { set(prev[0],prev[1]); maxed=false; e.currentTarget.setAttribute('aria-label','Maximize'); announce(toast,'Restored'); }
+    };
+  })();
+</script>
+</body>
+</html>
