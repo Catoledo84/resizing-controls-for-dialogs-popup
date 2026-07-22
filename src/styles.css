@@ -46,6 +46,27 @@ body {
   color: #5b6478;
   margin: 0 0 24px;
 }
+.page code {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.9em;
+  background: #eef0f6;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ---- demo sections ---- */
+.demo {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin: 0 0 20px;
+  background: #fff;
+}
+.demo h2 {
+  color: var(--navy);
+  font-size: 18px;
+  margin: 0 0 8px;
+}
 .open-btn {
   border: 0;
   background: var(--blue);
@@ -98,10 +119,18 @@ body {
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
+.popup__titlegroup {
+  min-width: 0;
+}
 .popup__title {
   margin: 0;
   color: var(--navy);
-  font-size: 18px;
+  font-size: 20px;
+}
+.popup__subtitle {
+  margin: 2px 0 0;
+  color: #5b6478;
+  font-size: 14px;
 }
 .popup__close {
   border: 0;
@@ -132,15 +161,15 @@ body {
 /* ---- corner grip (WAI-ARIA separator) ---- */
 .popup__grip {
   position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 24px;
-  height: 24px;
-  padding: 0;
+  right: 6px;
+  bottom: 6px;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
   border: 0;
   background: transparent;
   color: var(--grip);
-  border-radius: 5px;
+  border-radius: 7px;
   cursor: nwse-resize;
   display: grid;
   place-items: center;
@@ -154,6 +183,150 @@ body {
   outline: 3px solid var(--blue-focus);
   outline-offset: 1px;
   color: var(--blue);
+}
+
+/* ---- form inside the popup ---- */
+.form {
+  margin: 0;
+}
+.form__row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: start;
+  gap: 16px;
+  margin: 0 0 20px;
+}
+.form__row:last-child {
+  margin-bottom: 0;
+}
+.form__label {
+  font-weight: 700;
+  color: #1c2536;
+  font-size: 15px;
+  padding-top: 10px;
+}
+.form__input {
+  width: 100%;
+  font: inherit;
+  color: #1c2536;
+  padding: 10px 14px;
+  border: 1px solid #d3d8e6;
+  border-radius: 8px;
+  background: #fff;
+  resize: vertical;
+}
+.form__input::placeholder {
+  color: #9aa2b8;
+}
+.form__input:focus-visible {
+  outline: 3px solid var(--blue-focus);
+  outline-offset: 1px;
+  border-color: var(--blue);
+}
+
+/* ---- footer actions (Cancel / Clear / Submit) ---- */
+.popup__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 16px 16px 24px;
+  border-top: 1px solid var(--line);
+}
+/* When a corner grip is present, keep the actions clear of it. */
+.popup:has(.popup__grip) .popup__footer {
+  padding-right: 52px;
+  padding-bottom: 28px;
+}
+.btn {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 10px 20px;
+  border: 1px solid transparent;
+}
+.btn:focus-visible {
+  outline: 3px solid var(--blue-focus);
+  outline-offset: 2px;
+}
+.btn--link {
+  background: transparent;
+  color: var(--blue);
+}
+.btn--link:hover {
+  text-decoration: underline;
+}
+.btn--outline {
+  background: #fff;
+  color: var(--blue);
+  border-color: var(--blue);
+}
+.btn--outline:hover {
+  background: #eef1ff;
+}
+.btn--primary {
+  background: var(--blue);
+  color: #fff;
+}
+.btn--primary:hover {
+  background: #1d3fd0;
+}
+
+/* ---- header controls: − / + stepper + maximize + close (Option B) ---- */
+.popup__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.stepper {
+  display: inline-flex;
+  gap: 8px;
+}
+.popup__controls-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 2px;
+  background: var(--line);
+}
+.ctrl-btn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d3d8e6;
+  background: #fff;
+  color: var(--navy);
+  font-size: 20px;
+  line-height: 1;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.ctrl-btn:hover:not(:disabled) {
+  background: #f0f2fa;
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.ctrl-btn:focus-visible {
+  outline: 3px solid var(--blue-focus);
+  outline-offset: 2px;
+}
+.ctrl-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+/* aria-pressed marks the maximize toggle's on state for sighted users too. */
+.ctrl-btn[aria-pressed="true"] {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+/* Close button: borderless, matches the original X styling. */
+.ctrl-btn.popup__close {
+  border-color: transparent;
 }
 
 /* ---- floating key hint: full-width bar docked below the popup ---- */

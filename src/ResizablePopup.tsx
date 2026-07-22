@@ -12,7 +12,11 @@ interface ResizablePopupProps {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** Optional line shown under the title. */
+  subtitle?: string;
   children?: ReactNode;
+  /** Optional footer content (e.g. Cancel / Clear / Submit actions). */
+  footer?: ReactNode;
   initialSize?: Size;
   constraints?: Partial<SizeConstraints>;
 }
@@ -34,7 +38,9 @@ export function ResizablePopup({
   open,
   onClose,
   title,
+  subtitle,
   children,
+  footer,
   initialSize = { width: 480, height: 320 },
   constraints,
 }: ResizablePopupProps) {
@@ -48,6 +54,7 @@ export function ResizablePopup({
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
   const titleId = useId();
+  const subtitleId = useId();
   const hintId = useId();
 
   // Focus management: remember opener, focus dialog on open, restore on close.
@@ -97,14 +104,22 @@ export function ResizablePopup({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={subtitle ? subtitleId : undefined}
         tabIndex={-1}
         style={{ width: size.width, height: size.height }}
         onKeyDown={onKeyDown}
       >
         <div className="popup__titlebar">
-          <h2 id={titleId} className="popup__title">
-            {title}
-          </h2>
+          <div className="popup__titlegroup">
+            <h2 id={titleId} className="popup__title">
+              {title}
+            </h2>
+            {subtitle && (
+              <p id={subtitleId} className="popup__subtitle">
+                {subtitle}
+              </p>
+            )}
+          </div>
           <button
             type="button"
             className="popup__close"
@@ -123,6 +138,8 @@ export function ResizablePopup({
         </div>
 
         <div className="popup__body">{children}</div>
+
+        {footer && <div className="popup__footer">{footer}</div>}
 
         <button
           type="button"
